@@ -18,6 +18,8 @@ from rest_framework.views import APIView
 from users.models import Profile
 from .serializers import BudgetSerializer, BudgetHistorySerializer
 from payments.models import RecurringPayment
+from ai_services.classifier import classifier
+from ai_services.budget_advisor import budget_advisor
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
@@ -274,3 +276,23 @@ class BudgetHistoryView(generics.ListAPIView):
             month=self.request.query_params.get('month'), 
             year=self.request.query_params.get('year')
         )
+    
+
+def add_transaction(request):
+    if request.method == 'POST':
+        description = request.POST.get('description')
+        amount = request.POST.get('amount')
+        
+        # AI PREDICTS THE CATEGORY! 🎯
+        predicted_category = classifier.predict_category(description)
+        
+        # Create transaction with AI-predicted category
+        transaction = Transaction.objects.create(
+            user=request.user,
+            description=description,
+            amount=amount,
+            category=Category.objects.get_or_create(name=predicted_category)[0],
+            date=datetime.now().date()
+        )
+        
+        return JsonResponse({'status': 'success', 'category': predicted_category})

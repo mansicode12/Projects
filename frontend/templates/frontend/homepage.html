@@ -1,3 +1,4 @@
+<!-- {% load static %}
 <section class="pt-32 pb-24">
     <div class="max-w-7xl mx-auto px-4">
         <h1 class="text-5xl font-bold">AI-Powered Finance Management Made Simple</h1>
@@ -54,4 +55,114 @@
             <span class="text-sm text-gray-600">Average ROI</span>
         </div>
     </div>
-</div>
+</div> -->
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Finance Tracker - Home</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Remix Icon CDN for icons -->
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@4.2.0/fonts/remixicon.css" rel="stylesheet"/>
+    
+    <style>
+        .bg-primary { background-color: #4f46e5; }
+        .text-primary { color: #4f46e5; }
+        .from-primary\/5 { --tw-gradient-from: rgba(79, 70, 229, 0.05); }
+        .to-primary\/10 { --tw-gradient-to: rgba(79, 70, 229, 0.1); }
+        .from-secondary\/5 { --tw-gradient-from: rgba(139, 92, 246, 0.05); }
+        .to-secondary\/10 { --tw-gradient-to: rgba(139, 92, 246, 0.1); }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Navigation Bar -->
+    <nav class="bg-white shadow-sm fixed w-full z-10">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="text-2xl font-bold text-primary">AI Finance Tracker</div>
+            <div class="space-x-6">
+                <a href="{% url 'homepage' %}" class="text-gray-700 hover:text-primary">Home</a>
+                <a href="{% url 'login' %}" class="text-gray-700 hover:text-primary">Login</a>
+                <a href="{% url 'signup' %}" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90">Get Started</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="pt-16">
+        <!-- Hero Section -->
+        <section class="pt-32 pb-24">
+            <div class="max-w-7xl mx-auto px-4">
+                <h1 class="text-5xl font-bold">AI-Powered Finance Management Made Simple</h1>
+                <p class="text-xl text-gray-600 mt-4">Track, budget, and predict your finances with AI.</p>
+                <div class="mt-6">
+                    <a href="{% url 'signup' %}" class="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary/90">Get Started Free</a>
+                    <button id="watch-demo" class="px-6 py-3 border border-gray-300 rounded-lg ml-4 hover:bg-gray-50">Watch Demo</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Stats Section -->
+        <div class="grid grid-cols-3 gap-4 mt-8 max-w-7xl mx-auto px-4">
+            <div class="text-center">
+                <div class="text-3xl font-bold text-primary mb-2" id="active-users">{{ active_users|default:"0" }}</div>
+                <div class="text-gray-600">Active Users</div>
+            </div>
+            <div class="text-center">
+                <div class="text-3xl font-bold text-primary mb-2" id="accuracy-rate">{{ accuracy_rate|default:"0" }}%</div>
+                <div class="text-gray-600">Accuracy Rate</div>
+            </div>
+            <div class="text-center">
+                <div class="text-3xl font-bold text-primary mb-2">{{ support_availability|default:"0" }}</div>
+                <div class="text-gray-600">Support</div>
+            </div>
+        </div>
+
+        <!-- Monthly Savings Card -->
+        <div class="bg-gradient-to-br from-secondary/5 to-secondary/10 p-8 rounded-xl flex items-center max-w-7xl mx-auto px-4 mt-8">
+            <div class="w-full">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold">Monthly Savings</h3>
+                    <i class="ri-arrow-right-up-line text-green-500"></i>
+                </div>
+                <div class="text-3xl font-bold text-primary mb-2" id="monthly-savings">${{ monthly_savings|default:"0" }}</div>
+                <div class="text-sm text-gray-600">+<span id="savings-growth">{{ savings_growth|default:"0" }}</span>% from last month</div>
+            </div>
+        </div>
+
+        <!-- AI Investment Advisor Card -->
+        <div class="bg-gradient-to-br from-primary/5 to-primary/10 p-8 rounded-xl relative overflow-hidden max-w-7xl mx-auto px-4 mt-8">
+            <div class="relative z-10">
+                <h3 class="text-lg font-semibold mb-2">AI Investment Advisor</h3>
+                <p class="text-sm text-gray-600 mb-4">Get personalized investment recommendations</p>
+                <div class="flex items-center space-x-4">
+                    <div class="flex -space-x-2">
+                        <img src="{% static 'images/user1.jpg' %}" alt="User" class="w-8 h-8 rounded-full border-2 border-white">
+                        <img src="{% static 'images/user2.jpg' %}" alt="User" class="w-8 h-8 rounded-full border-2 border-white">
+                        <img src="{% static 'images/user3.jpg' %}" alt="User" class="w-8 h-8 rounded-full border-2 border-white">
+                    </div>
+                    <span class="text-sm text-gray-600">+<span id="investment-users">{{ investment_users|default:"0" }}</span> users this week</span>
+                </div>
+                <div class="mt-4 flex items-center space-x-2">
+                    <div class="text-green-500 font-semibold">+<span id="average-roi">{{ average_roi|default:"0" }}</span>%</div>
+                    <div class="h-1 w-32 bg-gray-200 rounded-full overflow-hidden">
+                        <div class="h-full w-3/4 bg-green-500 rounded-full"></div>
+                    </div>
+                    <span class="text-sm text-gray-600">Average ROI</span>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white mt-16 py-8 border-t">
+        <div class="max-w-7xl mx-auto px-4 text-center text-gray-600">
+            <p>&copy; 2026 AI Finance Tracker. All rights reserved.</p>
+        </div>
+    </footer>
+</body>
+</html>

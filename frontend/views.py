@@ -10,7 +10,8 @@ from insights.models import BudgetInsight, SavingsGoal
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.shortcuts import redirect
-
+from ai_services.classifier import classifier
+import json
 
 @login_required
 def dashboard_stats(request):
@@ -20,7 +21,8 @@ def dashboard_stats(request):
     forecasted_spending = BudgetInsight.objects.aggregate(Sum('forecasted_spending'))['forecasted_spending__sum'] or 1
     accuracy_rate = round((forecasted_spending / total_spending) * 100, 2) if total_spending else 0
 
-    total_settlements = Settlement.objects.filter(is_settled=True).count()
+    #total_settlements = Settlement.objects.filter(is_settled=True).count()
+    total_settlements = Settlement.objects.filter(settled=True).count()
     total_transactions = Settlement.objects.count()
     support_availability = round((total_settlements / total_transactions) * 100, 2) if total_transactions else 0
 
@@ -46,8 +48,8 @@ def dashboard_stats(request):
         'average_roi': average_roi,
     }
 
-    return render(request, 'homepage.html', context)
-
+    #return render(request, 'homepage.html', context)
+    return render(request, 'frontend/dashboard.html', context)
 
 @login_required
 def financial_summary(request):
@@ -140,4 +142,22 @@ def spending_analysis(request):
     return render(request, 'dashboard.html', {"context": json.dumps(context)})
 
 
+# Add these simple views for pages that just render templates
 
+def homepage(request):
+    return render(request, 'frontend/homepage.html')
+
+def signup_view(request):
+    return render(request, 'frontend/signup.html')
+
+def budget_view(request):
+    return render(request, 'frontend/budget.html')
+
+def goals_view(request):
+    return render(request, 'frontend/goals.html')
+
+def transactions_view(request):
+    return render(request, 'frontend/transaction.html')
+
+def group_expenses_view(request):
+    return render(request, 'frontend/group_expenses.html')
