@@ -1,60 +1,74 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Financial Dashboard</title>
+    <title>FinTrack - Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/5.5.0/echarts.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/remixicon@4.5.0/fonts/remixicon.css" rel="stylesheet">
     <style>
         .bg-primary { background-color: #4f46e5; }
         .text-primary { color: #4f46e5; }
         .border-primary { border-color: #4f46e5; }
+        /* FIX: Force chart container height */
+        #incomeExpenseChart {
+            height: 200px !important;
+            max-height: 200px !important;
+            width: 100% !important;
+        }
+        .ml-64 { position: relative; z-index: 20; background-color: #f9fafb; }
     </style>
 </head>
 <body class="bg-gray-50">
-    <!-- SIDEBAR - Added on the left -->
-    <div class="fixed left-0 top-0 h-full w-64 bg-white shadow-lg z-10">
+    <!-- Pass Django data to JavaScript -->
+    <script>
+        window.savingsProgress = {{ savings_progress|default:0 }};
+        window.realData = {
+            totalBalance: {{ total_balance|default:0 }},
+            monthlyIncome: {{ monthly_income|default:0 }},
+            monthlyExpenses: {{ monthly_expenses|default:0 }},
+            savings: {{ monthly_savings|default:0 }},
+            balanceChange: {{ balance_change|default:0 }},
+            incomeChange: {{ income_change|default:0 }},
+            expenseChange: {{ expense_change|default:0 }}
+        };
+    </script>
+
+    <!-- SIDEBAR -->
+    <div class="fixed left-0 top-0 h-full w-64 bg-white shadow-lg">
         <div class="p-6">
             <h1 class="text-2xl font-bold text-primary">FinTrack</h1>
-            <p class="text-sm text-gray-600 mt-1">Welcome back, {{ user.username|default:"User" }}</p>
+            <p class="text-sm text-gray-600 mt-1">Welcome back, {{ user.username|default:"mansi1404" }}</p>
         </div>
         
         <nav class="mt-6">
-            <a href="/dashboard/" class="flex items-center px-6 py-3 {% if request.path == '/dashboard/' %}bg-primary/10 text-primary border-r-4 border-primary{% else %}text-gray-700{% endif %} hover:bg-gray-50">
+            <a href="/dashboard/" class="flex items-center px-6 py-3 text-primary bg-primary/10 border-r-4 border-primary">
                 <i class="ri-dashboard-line mr-3"></i>
                 <span>Dashboard</span>
             </a>
-            
             <a href="/transactions/" class="flex items-center px-6 py-3 text-gray-700 hover:bg-gray-50">
                 <i class="ri-exchange-line mr-3"></i>
                 <span>Transactions</span>
             </a>
-            
             <a href="/budget/" class="flex items-center px-6 py-3 text-gray-700 hover:bg-gray-50">
                 <i class="ri-money-rupee-circle-line mr-3"></i>
                 <span>Budget</span>
             </a>
-            
             <a href="/goals/" class="flex items-center px-6 py-3 text-gray-700 hover:bg-gray-50">
                 <i class="ri-flag-line mr-3"></i>
                 <span>Goals</span>
             </a>
-            
             <a href="/group-expenses/" class="flex items-center px-6 py-3 text-gray-700 hover:bg-gray-50">
                 <i class="ri-group-line mr-3"></i>
                 <span>Group Expenses</span>
             </a>
-            
             <div class="border-t my-4"></div>
-            
             <a href="/reports/" class="flex items-center px-6 py-3 text-gray-700 hover:bg-gray-50">
                 <i class="ri-bar-chart-line mr-3"></i>
                 <span>Reports</span>
             </a>
-            
             <a href="/settings/" class="flex items-center px-6 py-3 text-gray-700 hover:bg-gray-50">
                 <i class="ri-settings-line mr-3"></i>
                 <span>Settings</span>
@@ -69,206 +83,403 @@
         </div>
     </div>
 
-    <!-- MAIN CONTENT - Shifted to the right to make space for sidebar -->
-    <div class="ml-64">
-        <!-- Header (your existing header) -->
-        <header class="bg-white border-b border-gray-200">
-            <div class="flex items-center justify-between px-8 py-4">
-                <!-- Welcome Message -->
-                <div>
-                    <h2 id="welcomeMessage" class="text-2xl font-semibold text-gray-900">Welcome back, User</h2>
-                    <p id="currentDate" class="text-sm text-gray-500"></p>
-                </div>
-
-                <!-- Right Section: Notifications & User Avatar -->
-                <div class="flex items-center space-x-4">
-                    <!-- Notification Icon -->
-                    <button id="notificationBtn" class="relative p-2 text-gray-600 hover:text-gray-900">
-                        <div class="w-6 h-6 flex items-center justify-center">
-                            <i class="ri-notification-line"></i>
-                        </div>
-                        <span id="notificationBadge" class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full hidden"></span>
-                    </button>
-
-                    <!-- Notification Dropdown -->
-                    <div id="notificationDropdown" class="hidden absolute right-0 mt-2 w-64 bg-white border border-gray-200 rounded-lg shadow-lg">
-                        <div id="notificationList" class="p-4"></div>
-                    </div>
-
-                    <!-- User Profile Dropdown -->
-                    <div class="relative">
-                        <button id="userDropdownBtn" class="h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center">
-                            <img id="userAvatar" src="https://via.placeholder.com/40" class="w-8 h-8 rounded-full" alt="User">
-                        </button>
-                        
-                        <!-- Dropdown Menu -->
-                        <div id="userDropdown" class="hidden absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-lg shadow-lg">
-                            <a href="/profile" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                                <i class="ri-user-line mr-2"></i> Profile
-                            </a>
-                            <a href="/logout" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                                <i class="ri-logout-box-line mr-2"></i> Logout
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </header>
-
-        <!-- Main Content (your existing content) -->
-        <div class="container mx-auto px-6 py-4">
-            <!-- Financial Summary Cards -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                <!-- Total Balance -->
-                <div class="bg-white p-6 rounded-lg shadow-sm">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-sm font-medium text-gray-500">Total Balance</h3>
-                        <div class="w-8 h-8 bg-primary bg-opacity-10 rounded-full flex items-center justify-center">
-                            <i class="ri-wallet-line text-primary"></i>
-                        </div>
-                    </div>
-                    <p id="totalBalance" class="text-2xl font-semibold text-gray-900">Loading...</p>
-                    <p id="balanceChange" class="text-sm text-green-600 mt-2">
-                        <i class="ri-arrow-up-line"></i>
-                        Loading...
-                    </p>
-                </div>
-
-                <!-- Monthly Income -->
-                <div class="bg-white p-6 rounded-lg shadow-sm">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-sm font-medium text-gray-500">Monthly Income</h3>
-                        <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                            <i class="ri-arrow-up-circle-line text-green-600"></i>
-                        </div>
-                    </div>
-                    <p id="monthlyIncome" class="text-2xl font-semibold text-gray-900">Loading...</p>
-                    <p id="incomeChange" class="text-sm text-green-600 mt-2">
-                        <i class="ri-arrow-up-line"></i>
-                        Loading...
-                    </p>
-                </div>
-
-                <!-- Monthly Expenses -->
-                <div class="bg-white p-6 rounded-lg shadow-sm">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-sm font-medium text-gray-500">Monthly Expenses</h3>
-                        <div class="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
-                            <i class="ri-arrow-down-circle-line text-red-600"></i>
-                        </div>
-                    </div>
-                    <p id="monthlyExpenses" class="text-2xl font-semibold text-gray-900">Loading...</p>
-                    <p id="expenseChange" class="text-sm text-red-600 mt-2">
-                        <i class="ri-arrow-down-line"></i>
-                        Loading...
-                    </p>
-                </div>
-
-                <!-- Savings Progress -->
-                <div class="bg-white p-6 rounded-lg shadow-sm">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-sm font-medium text-gray-500">Savings Progress</h3>
-                        <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                            <i class="ri-safe-line text-blue-600"></i>
-                        </div>
-                    </div>
-                    <p id="savingsProgress" class="text-2xl font-semibold text-gray-900">Loading...</p>
-                    <div class="w-full bg-gray-200 rounded-full h-2.5 mt-2">
-                        <div id="savingsProgressBar" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%;"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Quick Actions -->
-            <div class="bg-white p-6 rounded-lg shadow-sm mb-8">
-                <h3 class="text-lg font-semibold text-gray-900 mb-6">Quick Actions</h3>
-                <div class="grid grid-cols-2 gap-4">
-                    <button id="voiceEntryBtn" class="flex flex-col items-center justify-center p-4 bg-gray-100 rounded-lg">
-                        <i class="ri-mic-line text-3xl text-gray-600 mb-2"></i>
-                        <span class="text-sm font-medium text-gray-700">Voice Entry</span>
-                    </button>
-                    <a href="/set-budget" class="flex flex-col items-center justify-center p-4 bg-gray-100 rounded-lg">
-                        <i class="ri-pie-chart-line text-3xl text-gray-600 mb-2"></i>
-                        <span class="text-sm font-medium text-gray-700">Set Budget</span>
-                    </a>
-                    <a href="/add-transaction" class="flex flex-col items-center justify-center p-4 bg-gray-100 rounded-lg">
-    <i class="ri-add-circle-line text-3xl text-gray-600 mb-2"></i>
-    <span class="text-sm font-medium text-gray-700">Add Transaction</span>
-</a>
-                   
-                    <a href="/ai-insights" class="flex flex-col items-center justify-center p-4 bg-gray-100 rounded-lg">
-                        <i class="ri-line-chart-line text-3xl text-gray-600 mb-2"></i>
-                        <span class="text-sm font-medium text-gray-700">Analyze Spending</span>
-                    </a>
-                </div>
-            </div>
-
-            <!-- Rest of your content remains exactly the same -->
-            <!-- Spending Analysis -->
-            <div class="bg-white p-6 rounded-lg shadow-sm mb-8">
-                <h3 class="text-lg font-semibold text-gray-900 mb-6">Spending Analysis</h3>
-                <div id="spendingChart" class="h-80"></div>
-                <div class="grid grid-cols-2 gap-6 mt-6">
-                    <div class="bg-white p-6 rounded-lg shadow-sm">
-                        <h3 class="text-md font-semibold text-gray-900 mb-4">Expense Breakdown by Category</h3>
-                        <div id="expensePieChart" class="h-60"></div>
-                    </div>
-                    <div class="bg-white p-6 rounded-lg shadow-sm">
-                        <h3 class="text-md font-semibold text-gray-900 mb-4">Monthly Expenses Trend</h3>
-                        <div id="expenseBarChart" class="h-60"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Recent Transactions -->
-            <div class="bg-white p-6 rounded-lg shadow-sm mb-8">
-                <h3 class="text-lg font-semibold text-gray-900 mb-6">Recent Transactions</h3>
-                <div id="transactionList" class="space-y-4"></div>
-            </div>
-
-            <!-- Upcoming Bills -->
-            <div class="bg-white p-6 rounded-lg shadow-sm mb-8">
-                <h3 class="text-lg font-semibold text-gray-900 mb-6">Upcoming Bills</h3>
-                <div id="billsList" class="space-y-4"></div>
-            </div>
-
-            <!-- AI Insights -->
-            <div class="bg-white p-6 rounded-lg shadow-sm mb-8">
-                <h3 class="text-lg font-semibold text-gray-900 mb-6">AI Insights</h3>
-                <div id="aiInsightsBox" class="p-4 bg-blue-50 rounded-lg"></div>
-            </div>
-
-            <!-- Savings Goals Tracker -->
-            <div class="p-6 bg-white shadow-lg rounded-lg">
-                <h3 class="font-semibold text-gray-800 mb-4">Savings Goals</h3>
-                <div id="savingsGoals" class="space-y-4"></div>
-            </div>
+    <!-- MAIN CONTENT -->
+     <div class="ml-64 p-8 relative z-20 bg-gray-50">
+        <!-- Welcome Header -->
+        <div class="mb-8">
+            <h2 class="text-3xl font-bold text-gray-800">Welcome back, {{ user.username|default:"mansi1404" }}</h2>
+            <p class="text-gray-500" id="currentDateDisplay"></p>
         </div>
-    </div>
 
-    <!-- Transaction Confirmation Modal -->
-    <div id="transactionModal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center">
-        <div class="bg-white p-6 rounded-lg shadow-lg w-96">
-            <h3 class="text-lg font-semibold text-gray-900 mb-4">Confirm Transaction</h3>
-            <label class="block text-sm text-gray-700 mb-1">Amount</label>
-            <input type="number" id="editAmount" class="w-full p-2 border rounded mb-3" />
+        <!-- Stats Cards - Row 1 -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <!-- Total Balance -->
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <p class="text-sm text-gray-500 mb-2">Total Balance</p>
+                <p class="text-3xl font-bold text-gray-900">₹{{ total_balance|default:164642|floatformat:2 }}</p>
+                <p class="text-sm {% if balance_change|default:0 >= 0 %}text-green-600{% else %}text-red-600{% endif %} mt-2">
+                    {% if balance_change|default:0 >= 0 %}↑{% else %}↓{% endif %} {{ balance_change|default:525.25 }}% from last month
+                </p>
+            </div>
             
-            <label class="block text-sm text-gray-700 mb-1">Category</label>
-            <input type="text" id="editCategory" class="w-full p-2 border rounded mb-3" />
+            <!-- Monthly Income -->
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <p class="text-sm text-gray-500 mb-2">Monthly Income</p>
+                <p class="text-3xl font-bold text-green-600">₹{{ monthly_income|default:50000|floatformat:2 }}</p>
+                <p class="text-sm {% if income_change|default:0 >= 0 %}text-green-600{% else %}text-red-600{% endif %} mt-2">
+                    {% if income_change|default:0 >= 0 %}↑{% else %}↓{% endif %} {{ income_change|default:0 }}% from last month
+                </p>
+            </div>
+            
+            <!-- Monthly Expenses -->
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <p class="text-sm text-gray-500 mb-2">Monthly Expenses</p>
+                <p class="text-3xl font-bold text-red-600">₹{{ monthly_expenses|default:88310|floatformat:2 }}</p>
+                <p class="text-sm {% if expense_change|default:0 <= 0 %}text-green-600{% else %}text-red-600{% endif %} mt-2">
+                    {% if expense_change|default:0 <= 0 %}↓{% else %}↑{% endif %} {{ expense_change|default:235.37 }}% from last month
+                </p>
+            </div>
+            
+            <!-- Savings -->
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <p class="text-sm text-gray-500 mb-2">Savings</p>
+                <p class="text-3xl font-bold text-blue-600">₹{{ monthly_savings|default:100000|floatformat:2 }}</p>
+                <p class="text-sm text-green-600 mt-2">
+                    <span id="savingsGrowth">↑ {{ savings_progress|default:68.4 }}% from last month</span>
+                </p>
+            </div>
+        </div>
 
-            <label class="block text-sm text-gray-700 mb-1">Transaction Type</label>
-            <select id="editType" class="w-full p-2 border rounded mb-3">
-                <option value="expense">Expense</option>
-                <option value="income">Income</option>
-            </select>
+        <!-- Income vs Expenses Chart - Row 2 (Like second screenshot) -->
+        <div class="bg-white rounded-xl shadow-sm p-6 mb-8">
+            <h3 class="text-lg font-semibold text-gray-800 mb-4">Income vs Expenses</h3>
+            <div class="mb-4 flex items-center space-x-4">
+                <div class="flex items-center">
+                    <div class="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
+                    <span class="text-sm text-gray-600">Income</span>
+                </div>
+                <div class="flex items-center">
+                    <div class="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
+                    <span class="text-sm text-gray-600">Expenses</span>
+                </div>
+            </div>
+            <!-- FIX: Removed conflicting classes, using inline style -->
+            <canvas id="incomeExpenseChart" style="height: 200px; width: 100%;"></canvas>
 
-            <div class="flex justify-end space-x-3">
-                <button id="cancelTransaction" class="px-4 py-2 bg-gray-300 rounded">Cancel</button>
-                <button id="saveTransaction" class="px-4 py-2 bg-primary text-white rounded">Save</button>
+            <!-- Y-axis labels -->
+            <div class="flex justify-between text-xs text-gray-500 mt-2 px-4">
+                <span>₹0</span>
+                <span>₹10000</span>
+                <span>₹20000</span>
+                <span>₹30000</span>
+                <span>₹40000</span>
+                <span>₹50000</span>
+                <span>₹60000</span>     
+            </div>
+        </div>
+
+        <!-- Quick Actions - Row 3 -->
+        <div class="bg-white rounded-xl shadow-sm p-6 mb-8">
+            <h3 class="text-lg font-semibold text-gray-800 mb-4">Quick Actions</h3>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <button class="flex flex-col items-center justify-center p-4 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
+                    <i class="ri-mic-line text-2xl text-gray-600 mb-2"></i>
+                    <span class="text-sm font-medium text-gray-700">Voice Entry</span>
+                </button>
+                <button class="flex flex-col items-center justify-center p-4 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
+                    <i class="ri-add-circle-line text-2xl text-gray-600 mb-2"></i>
+                    <span class="text-sm font-medium text-gray-700">Add Transaction</span>
+                </button>
+                <button class="flex flex-col items-center justify-center p-4 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
+                    <i class="ri-pie-chart-line text-2xl text-gray-600 mb-2"></i>
+                    <span class="text-sm font-medium text-gray-700">Set Budget</span>
+                </button>
+                <button class="flex flex-col items-center justify-center p-4 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
+                    <i class="ri-bar-chart-line text-2xl text-gray-600 mb-2"></i>
+                    <span class="text-sm font-medium text-gray-700">Analyze Spending</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- AI Insights Section -->
+        <div class="bg-white rounded-xl shadow-sm p-6 mb-8">
+            <h3 class="text-lg font-semibold text-gray-800 mb-4">AI Insights</h3>
+            <div class="space-y-4">
+                {% for insight in ai_insights %}
+                <div class="p-4 bg-blue-50 rounded-lg">
+                    <p class="font-medium text-gray-900 mb-1">{{ insight.title }}</p>
+                    <p class="text-sm text-gray-600 mb-2">{{ insight.message }}</p>
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs text-gray-500">Category: {{ insight.category }}</span>
+                        <a href="#" class="text-xs text-primary hover:underline">View details →</a>
+                    </div>
+                </div>
+                {% empty %}
+                <p class="text-gray-500 text-center py-4">No insights available</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Upcoming Bills Section -->
+        <div class="bg-white rounded-xl shadow-sm p-6 mb-8">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-gray-800">Upcoming Bills</h3>
+                <a href="/admin/insights/bill/add/" class="text-primary border border-primary px-3 py-1 rounded-lg text-sm hover:bg-primary hover:text-white transition-colors">+ Add Bill</a>
+            </div>
+            <div class="space-y-4">
+                {% for bill in upcoming_bills %}
+                <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                    <div class="flex items-center">
+                        <div class="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center mr-3">
+                            <i class="ri-bill-line text-yellow-600"></i>
+                        </div>
+                        <div>
+                            <p class="font-medium text-gray-900">{{ bill.name }}</p>
+                            <p class="text-xs text-gray-500">{{ bill.category }}</p>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <p class="font-medium text-gray-900">₹{{ bill.amount|floatformat:2 }}</p>
+                        <p class="text-xs {% if bill.days_remaining <= 7 %}text-red-600{% else %}text-gray-500{% endif %}">
+                            Due {% if bill.days_remaining <= 0 %}Today{% else %}in {{ bill.days_remaining }} days{% endif %}
+                        </p>
+                    </div>
+                </div>
+                {% empty %}
+                <p class="text-gray-500 text-center py-4">No upcoming bills</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Recent Transactions & Budget Overview - Row 4 (Like third screenshot) -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <!-- Recent Transactions -->
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">Recent Transactions</h3>
+                <div class="space-y-4">
+                    <!-- Transaction 1 -->
+                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div class="flex items-center">
+                            <div class="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center mr-3">
+                                <i class="ri-receipt-line text-purple-600"></i>
+                            </div>
+                            <div>
+                                <p class="font-medium text-gray-900">Receipt from PARDHA WORLD</p>
+                                <p class="text-xs text-gray-500">22 Apr • Other</p>
+                            </div>
+                        </div>
+                        <p class="font-medium text-red-600">-₹927.00</p>
+                    </div>
+                    
+                    <!-- Transaction 2 -->
+                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div class="flex items-center">
+                            <div class="w-10 h-10 bg-pink-100 rounded-full flex items-center justify-center mr-3">
+                                <i class="ri-sparkling-line text-pink-600"></i>
+                            </div>
+                            <div>
+                                <p class="font-medium text-gray-900">skincare</p>
+                                <p class="text-xs text-gray-500">22 Apr • Other</p>
+                            </div>
+                        </div>
+                        <p class="font-medium text-red-600">-₹3,000.00</p>
+                    </div>
+                    
+                    <!-- Transaction 3 -->
+                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div class="flex items-center">
+                            <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                                <i class="ri-shopping-bag-line text-blue-600"></i>
+                            </div>
+                            <div>
+                                <p class="font-medium text-gray-900">shopping at zudio</p>
+                                <p class="text-xs text-gray-500">20 Apr • Other</p>
+                            </div>
+                        </div>
+                        <p class="font-medium text-red-600">-₹199.00</p>
+                    </div>
+                    
+                    <!-- Transaction 4 -->
+                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div class="flex items-center">
+                            <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                                <i class="ri-bank-line text-green-600"></i>
+                            </div>
+                            <div>
+                                <p class="font-medium text-gray-900">Tax Refund Deposit</p>
+                                <p class="text-xs text-gray-500">18 Apr • Other</p>
+                            </div>
+                        </div>
+                        <p class="font-medium text-red-600">-₹10,000.00</p>
+                    </div>
+                </div>
+                <a href="/transactions/" class="block text-center mt-4 text-primary hover:underline">View All →</a>
+            </div>
+
+            <!-- Budget Overview -->
+            <div class="bg-white rounded-xl shadow-sm p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-gray-800">Budget Overview</h3>
+                    <button class="text-primary border border-primary px-3 py-1 rounded-lg text-sm hover:bg-primary hover:text-white transition-colors">+ Add Budget</button>
+                </div>
+                
+                <!-- Food Budget -->
+                <div class="mb-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center">
+                            <div class="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center mr-2">
+                                <i class="ri-restaurant-line text-orange-600"></i>
+                            </div>
+                            <span class="font-medium text-gray-700">Food</span>
+                        </div>
+                        <span class="text-sm text-gray-600">₹0.00 / ₹0.00</span>
+                    </div>
+                    <div class="text-xs text-gray-500 text-right">-N/A Over</div>
+                </div>
+
+                <!-- Transport Budget -->
+                <div class="mb-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center">
+                            <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-2">
+                                <i class="ri-car-line text-blue-600"></i>
+                            </div>
+                            <span class="font-medium text-gray-700">Transport</span>
+                        </div>
+                        <span class="text-sm text-gray-600">₹0.00 / ₹0.00</span>
+                    </div>
+                    <div class="text-xs text-gray-500 text-right">-N/A Over</div>
+                </div>
+
+                <!-- Entertainment Budget -->
+                <div class="mb-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center">
+                            <div class="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center mr-2">
+                                <i class="ri-movie-line text-purple-600"></i>
+                            </div>
+                            <span class="font-medium text-gray-700">Entertainment</span>
+                        </div>
+                        <span class="text-sm text-gray-600">₹0.00 / ₹0.00</span>
+                    </div>
+                    <div class="text-xs text-gray-500 text-right">-N/A Over</div>
+                </div>
+
+                <!-- Shopping Budget -->
+                <div class="mb-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center">
+                            <div class="w-8 h-8 bg-pink-100 rounded-full flex items-center justify-center mr-2">
+                                <i class="ri-shopping-bag-line text-pink-600"></i>
+                            </div>
+                            <span class="font-medium text-gray-700">Shopping</span>
+                        </div>
+                        <span class="text-sm text-gray-600">₹0.00 / ₹0.00</span>
+                    </div>
+                    <div class="text-xs text-gray-500 text-right">-N/A Over</div>
+                </div>
             </div>
         </div>
     </div>
 
-    <script src="main.js"></script>
+    <script>
+        // Display current date
+        const currentDateDisplay = document.getElementById('currentDateDisplay');
+        if (currentDateDisplay) {
+            const today = new Date();
+            const options = { year: 'numeric', month: 'long', day: 'numeric' };
+            currentDateDisplay.textContent = today.toLocaleDateString('en-US', options);
+        }
+
+        // Generate last 6 months dynamically
+        function getLast6Months() {
+            const months = [];
+            const today = new Date();
+            for (let i = 5; i >= 0; i--) {
+                const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+                months.push(d.toLocaleString('default', { month: 'short' }) + ' ' + d.getFullYear());
+            }
+            return months;
+        }
+
+        const monthLabels = getLast6Months();
+
+        // Wait for DOM to be fully loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM loaded, initializing chart...');
+            
+            // Income vs Expenses Chart
+            const canvas = document.getElementById('incomeExpenseChart');
+            console.log('Canvas element:', canvas);
+            
+            if (canvas) {
+                // FIX: Force canvas dimensions
+                canvas.style.height = '200px';
+                canvas.style.maxHeight = '200px';
+                
+                const ctx = canvas.getContext('2d');
+                if (ctx) {
+                    try {
+                        if (typeof Chart === 'undefined') {
+                            console.error('Chart.js not loaded!');
+                            return;
+                        }
+                        
+                        // FIX: Destroy existing chart if any
+                        if (window.myChart) {
+                            window.myChart.destroy();
+                        }
+                        
+                        window.myChart = new Chart(ctx, {
+                            type: 'bar',
+                            data: {
+                                labels: monthLabels,
+                                datasets: [
+                                    {
+                                        label: 'Income',
+                                        data: [19725, 44000, 24275, 50000, 0, 0],
+                                        backgroundColor: '#10b981',
+                                        borderRadius: 4,
+                                        barPercentage: 0.6,
+                                    },
+                                    {
+                                        label: 'Expenses',
+                                        data: [15000, 18000, 20000, 22000, 25000, 30000],
+                                        backgroundColor: '#ef4444',
+                                        borderRadius: 4,
+                                        barPercentage: 0.6,
+                                    }
+                                ]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                aspectRatio: 2,
+                                plugins: {
+                                    legend: {
+                                        display: false
+                                    }
+                                },
+                                scales: {
+                                    y: {
+                                        beginAtZero: true,
+                                        max: 60000,
+                                        grid: {
+                                            display: true,
+                                            color: '#e5e7eb'
+                                        },
+                                        ticks: {
+                                            stepSize: 10000,
+                                            callback: function(value) {
+                                                return '₹' + (value/1000) + 'k';
+                                            }
+                                        }
+                                    },
+                                    x: {
+                                        grid: {
+                                            display: false
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                        console.log('Chart created successfully');
+                        
+                        // FIX: Re-apply height after creation
+                        setTimeout(() => {
+                            canvas.style.height = '200px';
+                        }, 100);
+                        
+                    } catch (error) {
+                        console.error('Error creating chart:', error);
+                    }
+                } else {
+                    console.error('Could not get 2d context');
+                }
+            } else {
+                console.error('Canvas element with id "incomeExpenseChart" not found!');
+            }
+        });
+    </script>
 </body>
 </html>
